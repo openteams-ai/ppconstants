@@ -39,8 +39,19 @@ shared library.
 
 | Family | Module | Names |
 |---|---|---|
-| Physical constants | `_physical` | `c` / `speed_of_light` |
+| Mathematical constants | `_mathematical` | `pi`, `golden` / `golden_ratio` |
+| Physical constants (exact SI) | `_physical` | `c` / `speed_of_light`, `h` / `Planck`, `e` / `elementary_charge`, `k` / `Boltzmann`, `N_A` / `Avogadro`, `g` |
+| Physical constants (derived) | `_physical` | `hbar`, `R` / `gas_constant`, `sigma` / `Stefan_Boltzmann`, `Wien` |
+| Physical constants (CODATA 2022) | `_physical` | `mu_0`, `epsilon_0`, `G` / `gravitational_constant`, `alpha` / `fine_structure`, `Rydberg`, `m_e` / `electron_mass`, `m_p` / `proton_mass`, `m_n` / `neutron_mass`, `m_u` / `u` / `atomic_mass` |
+| SI decimal prefixes | `_prefixes` | `quetta` ... `quecto` (all 24) |
+| Binary prefixes | `_prefixes` | `kibi` ... `yobi` (float64; intentional divergence from scipy's int) |
 | Conversion kernels | `_conversions` | `lambda2nu`, `nu2lambda` |
+
+Every constant is annotated exact / derived / measured with its reference
+source (BIPM 9th SI brochure, CODATA 2022). The test suite checks values
+against hardcoded references and physical consistency relations without
+scipy, plus an exact-equality sweep against `scipy.constants` when scipy
+is installed.
 
 The full scipy.constants surface (mathematical constants, the CODATA
 scalar table, SI prefixes, the unit catalog, `convert_temperature`, and

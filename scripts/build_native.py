@@ -16,7 +16,7 @@ from postpyc.build import build_file, BuildError
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "ppconstants"
 PACKAGE_ENTRY = PACKAGE_DIR / "__init__.py"
 
-EXPECTED_NATIVE = ["_physical", "_conversions"]
+EXPECTED_NATIVE = ["_mathematical", "_physical", "_prefixes", "_conversions"]
 
 
 def main() -> int:

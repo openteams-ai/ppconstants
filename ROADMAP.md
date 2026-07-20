@@ -54,41 +54,49 @@ Current notes:
 - Verified against postpython `13bcf30` (main): 19/19 tests pass
   (interpreted + C ABI via ctypes + ufunc extension), `build-native` and
   `build-ext` both succeed.
+- Targets 1 and 2 verified against the same postpython commit: 104 tests
+  pass, including an exact-equality sweep against scipy 1.18.0 for every
+  shared name.
 
 ## Target 1: Mathematical and Physical Scalar Constants
 
-Status: `Ready` (seeded: `c`, `speed_of_light`)
+Status: `Done` (verified against postpython `13bcf30`)
 
 The scipy.constants scalar table as module-level typed constants:
 
-- Mathematical: `pi`, `golden`, `golden_ratio`.
-- Exact SI (2019 redefinition): `c`, `h`, `e` (`elementary_charge`), `k`
-  (`Boltzmann`), `N_A` (`Avogadro`), plus derived exact values
-  (`hbar`, `R` / `gas_constant`, `sigma` / `Stefan_Boltzmann`, `zero_Celsius`).
-- Measured (CODATA 2022): `G` (`gravitational_constant`), `g`, `alpha`
-  (`fine_structure`), `mu_0`, `epsilon_0`, `Wien`, `Rydberg`, `m_e`
-  (`electron_mass`), `m_p` (`proton_mass`), `m_n` (`neutron_mass`),
-  `m_u` (`atomic_mass`), `eV`, `calorie`, ...
+- Mathematical (`_mathematical`): `pi` (folded from the compile-time
+  `postpyc.math.PI` import), `golden` / `golden_ratio` (folded constant
+  expression).
+- Exact SI, 2019 redefinition (`_physical`): `c` / `speed_of_light`,
+  `h` / `Planck`, `e` / `elementary_charge`, `k` / `Boltzmann`,
+  `N_A` / `Avogadro`, `g`.
+- Derived exact (`_physical`): `hbar` and `R` / `gas_constant` as folded
+  constant expressions; `sigma` / `Stefan_Boltzmann` and `Wien`
+  precomputed (closed forms need non-foldable operations), validated
+  against their defining formulas in tests.
+- Measured, CODATA 2022 (`_physical`): `mu_0`, `epsilon_0`,
+  `G` / `gravitational_constant`, `alpha` / `fine_structure`, `Rydberg`,
+  `m_e` / `electron_mass`, `m_p` / `proton_mass`, `m_n` / `neutron_mass`,
+  `m_u` / `u` / `atomic_mass`.
 
-Acceptance criteria:
-
-- Every constant documented with its reference source (SI brochure or
-  CODATA 2022) and whether it is exact or measured.
-- Aliases match scipy's names exactly.
-- Values verified against scipy in an optional scipy-gated test, and
-  against hardcoded references unconditionally.
-- Full set compiles: constants fold into kernels; the package shared
-  library builds.
+Delivered: every constant documented as exact/derived/measured with its
+reference source; aliases match scipy exactly; values checked against
+hardcoded references and physical consistency relations unconditionally,
+plus an exact-equality sweep against scipy 1.18.0 when installed; all
+modules and the package shared library compile. Energy/unit-style values
+(`eV`, `calorie`, ...) belong to Target 4.
 
 ## Target 2: SI Decimal and Binary Prefixes
 
-Status: `Ready`
+Status: `Done` (verified against postpython `13bcf30`)
 
-- Decimal: `quetta` ... `quecto` (scipy: `yotta` ... `quecto` plus
-  `quetta`/`ronna` since CODATA 2022 era; match current scipy `main`).
-- Binary: `kibi` ... `yobi`.
+- Decimal: `quetta` ... `quecto` (all 24).
+- Binary: `kibi` ... `yobi` (all 8).
 
-Same acceptance criteria as Target 1.
+Intentional divergence (documented in `_prefixes`): binary prefixes are
+Float64, not Python int as in scipy — POST constants are fixed-width and
+`zebi`/`yobi` exceed Int64; powers of two are exact in float64, so values
+are numerically identical.
 
 ## Target 3: Conversion Kernels
 
