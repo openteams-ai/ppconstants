@@ -69,7 +69,8 @@ The scipy.constants scalar table as module-level typed constants:
   expression).
 - Exact SI, 2019 redefinition (`_physical`): `c` / `speed_of_light`,
   `h` / `Planck`, `e` / `elementary_charge`, `k` / `Boltzmann`,
-  `N_A` / `Avogadro`, `g`.
+  `N_A` / `Avogadro`.
+- Exact by convention (`_physical`): `g` (standard gravity, CGPM 1901).
 - Derived exact (`_physical`): `hbar` and `R` / `gas_constant` as folded
   constant expressions; `sigma` / `Stefan_Boltzmann` and `Wien`
   precomputed (closed forms need non-foldable operations), validated

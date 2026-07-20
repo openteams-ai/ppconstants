@@ -13,6 +13,9 @@ import pytest
 np = pytest.importorskip("numpy")
 
 import ppconstants
+# The interpreted reference comes from the defining module, never the
+# package namespace, which may itself be native-backed at import time.
+from ppconstants import _conversions
 
 cc = shutil.which("cc") or shutil.which("clang") or shutil.which("gcc")
 
@@ -50,7 +53,7 @@ def test_all_public_ufuncs_registered(native):
 def test_compiled_matches_interpreted(native, name):
     x = np.logspace(-9.0, 3.0, 25)
     compiled = getattr(native, name)(x)
-    interpreted = getattr(ppconstants, name)(x)
+    interpreted = getattr(_conversions, name)(x)
     assert np.allclose(compiled, interpreted, rtol=1e-15)
 
 

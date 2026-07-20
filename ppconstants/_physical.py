@@ -6,6 +6,7 @@ mirroring the scipy.constants scalar table (names and aliases match).
 Reference sources
 -----------------
 - "exact (SI)": exact by the 2019 SI redefinition (BIPM 9th SI brochure).
+- "exact by convention": exact adopted values (standard gravity, CGPM 1901).
 - "derived exact": folded constant expressions over exact values.
 - "CODATA 2022": measured values from the CODATA 2022 adjustment, as
   published in scipy.constants (verified against scipy 1.18.0).
@@ -26,7 +27,10 @@ k: f64 = 1.380649e-23                # Boltzmann constant [J/K]
 Boltzmann = k
 N_A: f64 = 6.02214076e23             # Avogadro constant [1/mol]
 Avogadro = N_A
-g: f64 = 9.80665                     # standard acceleration of gravity [m/s^2]
+
+# ── Exact by convention ─────────────────────────────────────────────────────
+
+g: f64 = 9.80665                     # standard acceleration of gravity, CGPM 1901 [m/s^2]
 
 # ── Derived exact (folded constant expressions) ─────────────────────────────
 

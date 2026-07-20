@@ -4,6 +4,12 @@ scipy is a reference, never a dependency: this module is skipped when
 scipy is not installed. Every public constant shared with scipy.constants
 must match exactly (binary prefixes compare int == float, which is exact
 for powers of two). Kernels are compared pointwise.
+
+Exact equality is deliberate, not an oversight: values were sourced from
+scipy 1.18.0 (CODATA 2022), and a mismatch against a newer scipy signals
+reference drift (e.g. a future CODATA adjustment) that must be reconciled
+deliberately, source and tests together — never papered over with a
+tolerance.
 """
 
 import pytest

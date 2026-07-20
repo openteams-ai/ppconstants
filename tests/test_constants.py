@@ -26,7 +26,7 @@ class TestMathematical:
 
 
 class TestExactSI:
-    """Exact by the 2019 SI redefinition; equality must be bit-exact."""
+    """SI defining constants (2019 redefinition); equality must be bit-exact."""
 
     def test_defining_constants(self):
         assert ppc.c == 299792458.0
@@ -34,6 +34,9 @@ class TestExactSI:
         assert ppc.e == 1.602176634e-19
         assert ppc.k == 1.380649e-23
         assert ppc.N_A == 6.02214076e23
+
+    def test_conventional_constants(self):
+        # Exact by adoption, not an SI defining constant (CGPM 1901).
         assert ppc.g == 9.80665
 
     def test_aliases(self):

@@ -6,7 +6,11 @@ Reference values are exact through the SI-defined speed of light
 
 import pytest
 
-from ppconstants import c, lambda2nu, nu2lambda
+# Import from the defining modules, not the package: ppconstants/__init__
+# swaps in native ufuncs when ppconstants_native is importable, and these
+# tests must always exercise the interpreted kernels.
+from ppconstants._conversions import lambda2nu, nu2lambda
+from ppconstants._physical import c
 
 
 def close(a, b, rtol=1e-15):
