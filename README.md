@@ -45,19 +45,23 @@ shared library.
 | Physical constants (CODATA 2022) | `_physical` | `mu_0`, `epsilon_0`, `G` / `gravitational_constant`, `alpha` / `fine_structure`, `Rydberg`, `m_e` / `electron_mass`, `m_p` / `proton_mass`, `m_n` / `neutron_mass`, `m_u` / `u` / `atomic_mass` |
 | SI decimal prefixes | `_prefixes` | `quetta` ... `quecto` (all 24) |
 | Binary prefixes | `_prefixes` | `kibi` ... `yobi` (float64; intentional divergence from scipy's int) |
-| Conversion kernels | `_conversions` | `lambda2nu`, `nu2lambda` |
+| Unit catalog | `_units` | 87 constants: mass, angle, time, length, pressure, area, volume, speed, temperature, energy, power, force |
+| Conversion kernels | `_conversions` | `lambda2nu`, `nu2lambda`, `convert_temperature` |
+
+That is 155 public constants and 3 compiled kernels — the whole
+`scipy.constants` surface except the CODATA `physical_constants` lookup
+table, which is blocked upstream (see below).
 
 Every constant is annotated exact / derived / measured with its reference
-source (BIPM 9th SI brochure, CODATA 2022). The test suite checks values
-against hardcoded references and physical consistency relations without
-scipy, plus an exact-equality sweep against `scipy.constants` when scipy
-is installed.
+source (BIPM 9th SI brochure, CODATA 2022, NIST SP 811). Unit constants
+are written as folded expressions over their defining relations
+(`lb = 7000.0 * grain`, `parsec = au / arcsec`) rather than precomputed
+decimals, so the derivation stays visible and the values are bit-exact
+with scipy. The test suite checks values against hardcoded references and
+physical consistency relations without scipy, plus an exact-equality sweep
+against `scipy.constants` when scipy is installed.
 
-The full scipy.constants surface (mathematical constants, the CODATA
-scalar table, SI prefixes, the unit catalog, `convert_temperature`, and
-the `physical_constants` lookup API) is tracked target-by-target in
-[`ROADMAP.md`](ROADMAP.md), including the pieces blocked on named
-compiler capabilities.
+Progress is tracked target-by-target in [`ROADMAP.md`](ROADMAP.md).
 
 ## Installation and development
 
@@ -84,13 +88,15 @@ pixi run -e dev build-prefix    # libppconstants prefix layout under dist/prefix
 ## Usage
 
 ```python
-from ppconstants import c, lambda2nu, nu2lambda
+from ppconstants import c, mile, lambda2nu, convert_temperature
 
-c                     # 299792458.0 (exact, SI definition)
-lambda2nu(532e-9)     # 563519657894736.8 Hz
+c                                              # 299792458.0 (exact, SI definition)
+mile                                           # 1609.3439999999998 metres
+lambda2nu(532e-9)                              # 563519657894736.8 Hz
+convert_temperature(100.0, "Celsius", "F")     # 212.0
 
 import numpy as np
-nu2lambda(np.array([1.42040575e9, 4.74e14]))   # broadcasts elementwise
+convert_temperature(np.array([-40.0, 0.0, 37.0]), "C", "F")   # broadcasts
 ```
 
 When the optional `ppconstants_native` extension is importable, the
@@ -99,6 +105,28 @@ package prefers its compiled ufuncs at import time
 Python source — they are compile-time values folded into kernels; getting
 them exported into the C ABI (header + manifest) is upstream work tracked
 in ROADMAP Target 6.
+
+## Compiler findings
+
+Driving the compiler is half the point of this package (see the
+[PostSciPy roadmap](https://github.com/openteams-ai/postpython/blob/main/postscipy-roadmap.md)).
+Findings so far are written up with confirmed minimal reproducers in
+[`docs/upstream/`](docs/upstream/):
+
+1. [`Str` comparison silently miscompiles](docs/upstream/01-str-comparison-miscompiles.md)
+   — a string literal lowers to `int64_t 0`, so `scale == "C"` is always
+   false in compiled code while interpreted mode is correct. This is why
+   `convert_temperature`'s compiled kernel takes integer scale codes.
+2. [Constants are absent from the C ABI](docs/upstream/02-constants-missing-from-c-abi.md)
+   — they fold into kernels but get no `pp_*` symbol, header declaration,
+   or manifest entry.
+3. [Str-keyed containers are unavailable](docs/upstream/03-str-keyed-containers.md)
+   — blocks the CODATA `physical_constants` table and its accessors.
+
+On the positive side, module-level constant folding held up at this
+package's full scale: 155 constants, folded expression chains four levels
+deep, alias-of-alias references, and cross-module constant imports, with
+no new compiler issues.
 
 ## Working rules (summary)
 

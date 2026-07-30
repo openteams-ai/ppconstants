@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Per the PostSciPy working rules, compiler-dependent results are only
+# canonical against postpython `main`, so every job installs it from git
+# rather than from a pinned release.
+env:
+  POSTPYTHON_GIT: git+https://github.com/openteams-ai/postpython.git@main
+
+jobs:
+  interpreted:
+    name: Interpreted tests (no scipy)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install ppconstants and postpython from main
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "postpyc @ $POSTPYTHON_GIT"
+          python -m pip install -e .
+          python -m pip install pytest numpy
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  native-build:
+    name: Native build (C shared library + ufunc extension)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ppconstants and postpython from main
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "postpyc @ $POSTPYTHON_GIT"
+          python -m pip install -e .
+          python -m pip install pytest numpy
+      - name: Compile each module and the full package
+        run: python scripts/build_native.py
+      - name: Build the NumPy ufunc extension module
+        run: python scripts/build_ext.py
+      - name: Record the postpython commit used for verification
+        run: |
+          python - <<'PY'
+          import postpyc, pathlib
+          print("postpyc version:", getattr(postpyc, "__version__", "unknown"))
+          print("postpyc path:", pathlib.Path(postpyc.__file__).parent)
+          PY
+
+  scipy-compat:
+    name: scipy comparison sweep (optional)
+    runs-on: ubuntu-latest
+    # scipy is a reference, not a dependency: this job is allowed to fail
+    # loudly without blocking a merge, because a mismatch may mean scipy
+    # changed a reference value rather than that ppconstants is wrong.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install with scipy
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "postpyc @ $POSTPYTHON_GIT"
+          python -m pip install -e .
+          python -m pip install pytest numpy scipy
+      - name: Run the scipy sweep
+        run: python -m pytest tests/test_scipy_compat.py -v

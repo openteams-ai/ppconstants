@@ -11,19 +11,20 @@ time (constants always come from this source package).
 Implemented
 ------------------------------
 Mathematical constants (_mathematical): pi, golden / golden_ratio
-Physical constants (_physical)        : exact SI (c, h, e, k, N_A, g),
-                                        derived (hbar, R, sigma, Wien),
-                                        CODATA 2022 (mu_0, epsilon_0, G,
-                                        alpha, Rydberg, m_e, m_p, m_n, m_u)
-                                        plus scipy-compatible aliases
+Physical constants (_physical)        : exact SI (c, h, e, k, N_A),
+                                        conventional (g), derived (hbar,
+                                        R, sigma, Wien), CODATA 2022
+                                        (mu_0, epsilon_0, G, alpha,
+                                        Rydberg, m_e, m_p, m_n, m_u)
 SI/binary prefixes (_prefixes)        : quetta ... quecto, kibi ... yobi
-Conversion kernels (_conversions)     : lambda2nu, nu2lambda
+Unit catalog (_units)                 : mass, angle, time, length,
+                                        pressure, area, volume, speed,
+                                        temperature, energy, power, force
+Conversion kernels (_conversions)     : lambda2nu, nu2lambda,
+                                        convert_temperature
 
 Roadmap (see ROADMAP.md)
 ------------------------------
-Unit catalog : mass, angle, time, length, pressure, area, volume,
-               speed, temperature, energy, power, force
-Kernels      : convert_temperature
 CODATA table : physical_constants, value, unit, precision, find
                (blocked on Str-keyed containers upstream)
 """
@@ -43,6 +44,7 @@ from ppconstants._physical import (
     e, elementary_charge,
     k, Boltzmann,
     N_A, Avogadro,
+    # exact by convention
     g,
     # derived exact
     hbar,
@@ -67,33 +69,139 @@ from ppconstants._prefixes import (
     kibi, mebi, gibi, tebi, pebi, exbi, zebi, yobi,
 )
 
+from ppconstants._units import (
+    # mass
+    gram, metric_ton, grain, lb, pound, blob, slinch, slug, oz, ounce,
+    stone, long_ton, short_ton, troy_ounce, troy_pound, carat,
+    # angle
+    degree, arcmin, arcminute, arcsec, arcsecond,
+    # time
+    minute, hour, day, week, year, Julian_year,
+    # length
+    inch, foot, yard, mile, mil, pt, point, survey_foot, survey_mile,
+    nautical_mile, fermi, angstrom, micron, au, astronomical_unit,
+    light_year, parsec,
+    # pressure
+    atm, atmosphere, bar, torr, mmHg, psi,
+    # area
+    hectare, acre,
+    # volume
+    litre, liter, gallon, gallon_US, fluid_ounce, fluid_ounce_US,
+    bbl, barrel, gallon_imp, fluid_ounce_imp,
+    # speed
+    kmh, mph, mach, speed_of_sound, knot,
+    # temperature
+    zero_Celsius, degree_Fahrenheit,
+    # energy
+    eV, electron_volt, calorie, calorie_th, calorie_IT, erg,
+    Btu, Btu_IT, Btu_th, ton_TNT,
+    # power
+    hp, horsepower,
+    # force
+    dyn, dyne, lbf, pound_force, kgf, kilogram_force,
+)
+
 from ppconstants._conversions import (
     lambda2nu,
     nu2lambda,
+    convert_temperature_code,
+    CELSIUS, KELVIN, FAHRENHEIT, RANKINE,
 )
 
 __all__ = [
-    # mathematical
+    # ── mathematical ────────────────────────────────────────────────────
     "pi", "golden", "golden_ratio",
-    # physical: exact (SI)
+    # ── physical: exact (SI) ────────────────────────────────────────────
     "c", "speed_of_light", "h", "Planck", "e", "elementary_charge",
-    "k", "Boltzmann", "N_A", "Avogadro", "g",
-    # physical: derived exact
+    "k", "Boltzmann", "N_A", "Avogadro",
+    # ── physical: exact by convention ───────────────────────────────────
+    "g",
+    # ── physical: derived exact ─────────────────────────────────────────
     "hbar", "R", "gas_constant", "sigma", "Stefan_Boltzmann", "Wien",
-    # physical: measured (CODATA 2022)
+    # ── physical: measured (CODATA 2022) ────────────────────────────────
     "mu_0", "epsilon_0", "G", "gravitational_constant",
     "alpha", "fine_structure", "Rydberg",
     "m_e", "electron_mass", "m_p", "proton_mass",
     "m_n", "neutron_mass", "m_u", "u", "atomic_mass",
-    # SI decimal prefixes
+    # ── SI decimal prefixes ─────────────────────────────────────────────
     "quetta", "ronna", "yotta", "zetta", "exa", "peta", "tera", "giga",
     "mega", "kilo", "hecto", "deka", "deci", "centi", "milli", "micro",
     "nano", "pico", "femto", "atto", "zepto", "yocto", "ronto", "quecto",
-    # binary prefixes
+    # ── binary prefixes ─────────────────────────────────────────────────
     "kibi", "mebi", "gibi", "tebi", "pebi", "exbi", "zebi", "yobi",
-    # conversions
+    # ── units: mass ─────────────────────────────────────────────────────
+    "gram", "metric_ton", "grain", "lb", "pound", "blob", "slinch",
+    "slug", "oz", "ounce", "stone", "long_ton", "short_ton",
+    "troy_ounce", "troy_pound", "carat",
+    # ── units: angle ────────────────────────────────────────────────────
+    "degree", "arcmin", "arcminute", "arcsec", "arcsecond",
+    # ── units: time ─────────────────────────────────────────────────────
+    "minute", "hour", "day", "week", "year", "Julian_year",
+    # ── units: length ───────────────────────────────────────────────────
+    "inch", "foot", "yard", "mile", "mil", "pt", "point", "survey_foot",
+    "survey_mile", "nautical_mile", "fermi", "angstrom", "micron",
+    "au", "astronomical_unit", "light_year", "parsec",
+    # ── units: pressure ─────────────────────────────────────────────────
+    "atm", "atmosphere", "bar", "torr", "mmHg", "psi",
+    # ── units: area ─────────────────────────────────────────────────────
+    "hectare", "acre",
+    # ── units: volume ───────────────────────────────────────────────────
+    "litre", "liter", "gallon", "gallon_US", "fluid_ounce",
+    "fluid_ounce_US", "bbl", "barrel", "gallon_imp", "fluid_ounce_imp",
+    # ── units: speed ────────────────────────────────────────────────────
+    "kmh", "mph", "mach", "speed_of_sound", "knot",
+    # ── units: temperature ──────────────────────────────────────────────
+    "zero_Celsius", "degree_Fahrenheit",
+    # ── units: energy ───────────────────────────────────────────────────
+    "eV", "electron_volt", "calorie", "calorie_th", "calorie_IT", "erg",
+    "Btu", "Btu_IT", "Btu_th", "ton_TNT",
+    # ── units: power ────────────────────────────────────────────────────
+    "hp", "horsepower",
+    # ── units: force ────────────────────────────────────────────────────
+    "dyn", "dyne", "lbf", "pound_force", "kgf", "kilogram_force",
+    # ── conversion kernels ──────────────────────────────────────────────
     "lambda2nu", "nu2lambda",
+    "convert_temperature", "convert_temperature_code",
+    "CELSIUS", "KELVIN", "FAHRENHEIT", "RANKINE",
 ]
+
+# ── scipy-compatible temperature API ───────────────────────────────────────
+# CPython-boundary code (spec §9.1): the compiled artifact exposes the
+# integer-code kernel; this wrapper only maps scale names to codes, which
+# a compiled kernel cannot do today (see _conversions for why).
+
+_SCALE_CODES = {
+    "celsius": CELSIUS, "c": CELSIUS,
+    "kelvin": KELVIN, "k": KELVIN,
+    "fahrenheit": FAHRENHEIT, "f": FAHRENHEIT,
+    "rankine": RANKINE, "r": RANKINE,
+}
+
+
+def _scale_code(scale, argname):
+    try:
+        return _SCALE_CODES[scale.lower()]
+    except (AttributeError, KeyError):
+        raise NotImplementedError(
+            f"{argname}={scale!r} is unsupported: supported scales are "
+            "Celsius, Kelvin, Fahrenheit, and Rankine"
+        ) from None
+
+
+def convert_temperature(val, old_scale, new_scale):
+    """Convert `val` between the Celsius, Kelvin, Fahrenheit, and Rankine scales.
+
+    Scale names follow scipy: 'Celsius'/'C', 'Kelvin'/'K',
+    'Fahrenheit'/'F', 'Rankine'/'R', in any case. Delegates to the
+    compiled `convert_temperature_code` ufunc, so `val` may be a scalar or
+    any broadcastable array.
+    """
+    return convert_temperature_code(
+        val,
+        _scale_code(old_scale, "old_scale"),
+        _scale_code(new_scale, "new_scale"),
+    )
+
 
 __native_available__ = False
 __native_module__ = None
@@ -112,6 +220,10 @@ def _prefer_native() -> None:
 
     replaced = []
     for name in __all__:
+        # convert_temperature stays the interpreted string wrapper; it
+        # picks up the native kernel through the global it calls.
+        if name == "convert_temperature":
+            continue
         if callable(globals()[name]) and hasattr(native, name):
             globals()[name] = getattr(native, name)
             replaced.append(name)

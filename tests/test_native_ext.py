@@ -43,7 +43,7 @@ def native(tmp_path_factory):
 
 def test_all_public_ufuncs_registered(native):
     registered = {n for n in dir(native) if not n.startswith("_")}
-    expected = {"lambda2nu", "nu2lambda"}
+    expected = {"lambda2nu", "nu2lambda", "convert_temperature_code"}
     assert expected <= registered
     for name in expected:
         assert isinstance(getattr(native, name), np.ufunc), name
@@ -55,6 +55,21 @@ def test_compiled_matches_interpreted(native, name):
     compiled = getattr(native, name)(x)
     interpreted = getattr(_conversions, name)(x)
     assert np.allclose(compiled, interpreted, rtol=1e-15)
+
+
+def test_convert_temperature_code_matches_interpreted(native):
+    x = np.array([-273.15, -40.0, 0.0, 37.0, 100.0, 1000.0])
+    for old in (0, 1, 2, 3):
+        for new in (0, 1, 2, 3):
+            compiled = native.convert_temperature_code(x, old, new)
+            interpreted = _conversions.convert_temperature_code(x, old, new)
+            assert np.allclose(compiled, interpreted, rtol=0, atol=1e-12), (old, new)
+
+
+def test_compiled_temperature_kernel_folds_zero_celsius(native):
+    # 0 C -> K must be 273.15: proves the cross-module constant import of
+    # zero_Celsius from _units folded into the compiled kernel.
+    assert native.convert_temperature_code(0.0, 0, 1) == 273.15
 
 
 def test_broadcasting_and_out(native):

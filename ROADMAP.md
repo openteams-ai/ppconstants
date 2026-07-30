@@ -34,7 +34,7 @@ with minimal reproducers — the filing is part of the work.
 
 ## Target 0: Baseline Package Health
 
-Status: `Active`
+Status: `Done` (verified against postpython `13bcf30`; kept under CI)
 
 Acceptance criteria:
 
@@ -54,9 +54,11 @@ Current notes:
 - Verified against postpython `13bcf30` (main): 19/19 tests pass
   (interpreted + C ABI via ctypes + ufunc extension), `build-native` and
   `build-ext` both succeed.
-- Targets 1 and 2 verified against the same postpython commit: 104 tests
-  pass, including an exact-equality sweep against scipy 1.18.0 for every
-  shared name.
+- Targets 1 through 4 verified against the same postpython commit: 252
+  tests pass, including an exact-equality sweep against scipy 1.18.0 for
+  every shared constant, all 16 temperature-scale pairs, and both
+  wavelength/frequency kernels. All five modules and the package shared
+  library compile; the extension registers three ufuncs.
 
 ## Target 1: Mathematical and Physical Scalar Constants
 
@@ -101,41 +103,60 @@ are numerically identical.
 
 ## Target 3: Conversion Kernels
 
-Status: `Active` (`lambda2nu`, `nu2lambda` done in scaffold)
+Status: `Done` (verified against postpython `13bcf30`)
 
-Remaining: `convert_temperature(val, old_scale, new_scale)`.
+- `lambda2nu`, `nu2lambda`: exact relations through the SI-defined `c`,
+  imported cross-module from `_physical`.
+- `convert_temperature_code(val, old_code, new_code)`: compiled
+  `@vectorize` kernel converting between Celsius, Kelvin, Fahrenheit, and
+  Rankine through kelvin, matching scipy's arithmetic step for step.
+  Scales are the public integer constants `CELSIUS`, `KELVIN`,
+  `FAHRENHEIT`, `RANKINE`.
+- `convert_temperature(val, old_scale, new_scale)`: scipy-compatible
+  string API, an interpreted wrapper in the package manifest (spec §9.1
+  CPython-boundary code) that maps scale names to codes and raises
+  `NotImplementedError` for unsupported names, as scipy does.
 
-Open design question: scipy's signature takes string scale names. POST
-`@vectorize` kernels take scalar dtypes — `Str` parameters in a ufunc are
-untested territory. Options, in preference order:
+**The design question is now settled by evidence, not preference.** Option 1
+(a `Str`-parameterized kernel) was tried first, as the roadmap asked. It
+type-checks, compiles, and is correct interpreted — but the compiled
+kernel silently returns wrong answers, because the backend lowers the
+string literal to `int64_t 0` and emits a pointer-vs-integer comparison.
+Written up in
+[`docs/upstream/01-str-comparison-miscompiles.md`](docs/upstream/01-str-comparison-miscompiles.md);
+this is the highest-severity finding from this package so far, since it is
+a silent wrong answer rather than a build failure.
 
-1. `Str`-parameterized kernel if the compiler supports it (exercise, then
-   file gaps upstream).
-2. Scale-pair kernels (`_celsius_to_kelvin`, ...) behind a thin
-   CPython-boundary dispatcher in `__init__.py`, documented as an
-   intentional divergence of the compiled ABI (not the Python API).
+Intentional divergence: the compiled C ABI offers the integer-code kernel,
+not scipy's string signature. The Python API matches scipy exactly.
 
-Acceptance criteria:
-
-- scipy-compatible Python API (`convert_temperature(x, "Celsius", "Kelvin")`).
-- Reference values hardcoded (0 °C = 273.15 K, absolute zero, boiling
-  point across all four scales); optional scipy comparison.
-- Whatever cannot be expressed in pure POST Python is filed upstream with
-  a reproducer and referenced here.
+Known limitation: the kernel cannot signal a domain error for an
+unrecognised code (returning `NAN` fails to lower,
+[postpython#36](https://github.com/openteams-ai/postpython/issues/36)), so
+validation lives in the wrapper and C consumers must pass valid codes. The
+kernel treats an unknown code as "already kelvin".
 
 ## Target 4: Unit Conversion Constants Catalog
 
-Status: `Ready`
+Status: `Done` (verified against postpython `13bcf30`)
 
-The scipy.constants unit catalog as typed constants, family by family:
-mass (`gram`, `metric_ton`, `pound`, `ounce`, ...), angle (`degree`,
-`arcmin`, `arcsec`), time (`minute` ... `Julian_year`), length (`inch`,
-`mile`, `light_year`, `parsec`, ...), pressure (`atm`, `bar`, `torr`,
-`psi`), area, volume, speed, energy (`eV`, `calorie`, `erg`, ...), power
-(`hp`), force (`dyn`, `lbf`, `kgf`), temperature (`degree_Fahrenheit`).
+87 constants in `_units`, covering every family in the scipy catalog:
+mass, angle, time, length, pressure, area, volume, speed, temperature,
+energy, power, and force.
 
-This is "constants at scale" — expect it to stress compile-time constant
-folding performance and namespace/manifest size; report findings upstream.
+Written as **folded constant expressions over their defining relations**
+(`lb = 7000.0 * grain`, `mile = 1760.0 * yard`, `parsec = au / arcsec`,
+`hp = 550.0 * foot * pound * g`) rather than precomputed decimals. Two
+reasons: the derivation chain stays visible in the source, and it is the
+only way to be bit-exact with scipy — `7000 * grain` is
+`0.45359236999999997`, not the `0.45359237` the pound is defined as, and a
+literal would silently disagree in the last bits.
+
+This is the "constants at scale" pressure the package was assigned:
+155 module-level constants, chained folded expressions up to four levels
+deep, alias-of-alias references, and cross-module constant imports of
+`pi`, `c`, `e`, and `g`. The compiler handled all of it with no new
+issues — a positive result worth reporting upstream alongside the gaps.
 
 ## Target 5: CODATA `physical_constants` Table
 
@@ -144,48 +165,86 @@ Status: `Blocked` (compiler: Str-keyed containers)
 `physical_constants` dict mapping name → (value, unit, uncertainty), plus
 `value()`, `unit()`, `precision()`, `find()`, and `ConstantWarning`.
 
-First action when starting: file a postpython issue with a minimal
-reproducer for `Str`-keyed container support (per the package README and
-the PostSciPy working rules), and link it here.
+Reproducer confirmed and written up in
+[`docs/upstream/03-str-keyed-containers.md`](docs/upstream/03-str-keyed-containers.md):
+`postyp` exports no mapping type, and subscripting a module-level
+container fails with `PP900 subscripted name TABLE is not a lowered local
+array`. The draft also notes that `post-py check` passes on a module the
+compiler then rejects.
+
+`find()` additionally needs working string comparison in lowered code,
+which Target 3 proved is broken — so this target depends on both drafts.
 
 ## Target 6: Constants in the Native C ABI
 
-Status: `Blocked` (upstream postpython work; issue to be filed)
+Status: `Blocked` (upstream postpython work)
 
-Discovered at scaffold time: module-level constants fold into kernels but
-do **not** appear in the compiled artifact's C ABI — no `pp_*` symbol, no
-header `#define`/`extern const double`, no export-manifest entry
-(`collect_exports` in postpyc only exports functions). For a package that
-is mostly constants, the plain shared-library target currently carries
-only the conversion kernels.
+Module-level constants fold into kernels but do **not** appear in the
+compiled artifact's C ABI — no `pp_*` symbol, no header declaration, no
+export-manifest entry (`collect_exports` resolves every export through
+`resolve_function`, so constants are dropped). For a package that is
+mostly constants, the shared library currently publishes only the three
+conversion kernels.
 
-Action: file a postpython issue proposing constant exports in Package ABI
-v1 (header declarations + manifest entries), with this package as the
-motivating consumer and a minimal reproducer. Link it here once filed.
+Reproducer confirmed and written up in
+[`docs/upstream/02-constants-missing-from-c-abi.md`](docs/upstream/02-constants-missing-from-c-abi.md),
+which also notes that spec §9.1 ("Public symbols are top-level functions,
+dataclasses, type aliases, and constants") and §9.1.1 (Package ABI over
+exports) disagree on this point.
+
+Pinned by `tests/test_native_abi.py::test_constants_absent_from_c_abi`:
+that test asserts today's absent behavior, so it will fail when the
+feature lands, which is the signal to adopt it.
 
 ## Target 7: Packaging, CI, and Release Flow
 
-Status: `Later`
+Status: `Active`
 
-Mirrors ppspecial Target 11: CI for interpreted tests and native builds
-against postpython `main`, optional scipy-comparison job, source-only
-PyPI releases (`py3-none-any`, no binary wheels, no install/import-time
-compilation), and the `libppconstants` + `ppconstants` split prefix
-layout via `pixi run build-prefix`.
+Done: `.github/workflows/ci.yml` with three jobs — interpreted tests on
+Python 3.10 and 3.12, a native-build job compiling every module plus the
+ufunc extension, and an optional scipy-comparison job marked
+`continue-on-error` (a mismatch may mean scipy changed a reference value,
+which should not block a merge).
+
+All jobs install postpython from `main` per the working rules, rather than
+a pinned release, so CI failures distinguish library regressions from
+compiler drift.
+
+Remaining: source-only PyPI releases (`py3-none-any`, no binary wheels, no
+install/import-time compilation), the `libppconstants` + `ppconstants`
+split prefix layout via `pixi run build-prefix`, and versioned release
+notes separating the Python API, the C ABI, and the extension ABI.
 
 ## postpython Request Backlog
 
-Needs discovered from ppconstants; items become postpython issues when
-actively worked.
+Needs discovered from ppconstants. Each is written up with a confirmed
+minimal reproducer under [`docs/upstream/`](docs/upstream/), ready to file.
 
-- **Constants in the C ABI / export manifest** (Target 6) — to file.
-- **Str-keyed containers** for the CODATA table (Target 5) — to file when
-  Target 5 starts.
-- **Str scalar parameters in `@vectorize` kernels** (Target 3) — exercise
-  first, file if it fails.
-- Watching: [postpython#36](https://github.com/openteams-ai/postpython/issues/36)
-  (NAN/INF fail to lower) — relevant to scipy-compatible NaN behavior in
-  `convert_temperature` domain handling.
+Ordered by severity:
+
+1. **`Str` comparison silently miscompiles**
+   ([draft](docs/upstream/01-str-comparison-miscompiles.md)) — a string
+   literal lowers to `int64_t 0` and the comparison becomes
+   pointer-vs-integer, so valid POST Python that is correct interpreted
+   returns wrong answers compiled, with no diagnostic. The primary ask is
+   to **diagnose instead of miscompile**; full `Str` support is secondary.
+2. **Constants absent from the C ABI / export manifest**
+   ([draft](docs/upstream/02-constants-missing-from-c-abi.md), Target 6) —
+   blocks the native-library story for constant-heavy packages, and the
+   spec is self-inconsistent on whether constants are exports.
+3. **Str-keyed containers**
+   ([draft](docs/upstream/03-str-keyed-containers.md), Target 5) — blocks
+   `physical_constants` and its four accessor functions. Also records that
+   `post-py check` passes on a module the compiler rejects.
+
+Positive result worth reporting alongside the gaps: module-level constant
+folding (#11) held up at this package's full scale — 155 constants,
+four-deep folded expression chains, alias-of-alias references, and
+cross-module constant imports, with no new issues.
+
+Watching: [postpython#36](https://github.com/openteams-ai/postpython/issues/36)
+(NAN/INF fail to lower) — the reason `convert_temperature_code` cannot
+signal a domain error in the kernel.
 
 ## Publication Checklist for Each Milestone
 

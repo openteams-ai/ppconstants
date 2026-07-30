@@ -62,10 +62,37 @@ def test_nu2lambda_roundtrip(native_artifact):
     assert abs(nu2lambda(lambda2nu(lam)) - lam) <= 1e-15 * lam
 
 
+def test_convert_temperature_code_through_c_abi(native_artifact):
+    fn = getattr(native_artifact["lib"], "pp_convert_temperature_code")
+    fn.argtypes = [ctypes.c_double, ctypes.c_int64, ctypes.c_int64]
+    fn.restype = ctypes.c_double
+    assert fn(0.0, 0, 1) == 273.15          # 0 C  -> K
+    assert fn(0.0, 0, 2) == 32.0            # 0 C  -> F
+    assert fn(-40.0, 2, 0) == -40.0         # -40 F -> C
+
+
 def test_header_declares_kernel_exports(native_artifact):
     header = native_artifact["header"]
     assert "double pp_lambda2nu(double" in header
     assert "double pp_nu2lambda(double" in header
+    assert "double pp_convert_temperature_code(double" in header
+
+
+def test_constants_absent_from_c_abi(native_artifact):
+    """Regression pin for the gap filed upstream (ROADMAP Target 6).
+
+    Module-level constants fold into kernels but are not exported: no
+    pp_* symbol, no header declaration, no manifest entry. When the
+    compiler grows constant exports this test should start failing and be
+    inverted — that failure is the signal to update the roadmap.
+    """
+    header = native_artifact["header"]
+    manifest_names = {e["name"] for e in native_artifact["manifest"]["exports"]}
+    for constant in ("c", "pi", "zero_Celsius", "kilo"):
+        assert constant not in manifest_names
+        # Match a declaration, not a prefix of a longer export name.
+        assert f"pp_{constant}(" not in header
+        assert f"pp_{constant};" not in header
 
 
 def test_manifest_lists_kernel_exports(native_artifact):
