@@ -40,7 +40,16 @@ Standard = "https://github.com/openteams-ai/postpython/blob/main/docs/spec.md"
 packages = ["ppconstants"]
 
 [tool.hatch.build.targets.sdist]
-include = ["ppconstants", "tests", "scripts", "README.md", "ROADMAP.md", "pyproject.toml"]
+include = [
+    "ppconstants",
+    "tests",
+    "scripts",
+    "docs",
+    "README.md",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -71,5 +80,5 @@ dev = { features = ["dev"], solve-group = "default" }
 [tool.pixi.tasks]
 test = { cmd = "pytest tests/", description = "Run the test suite (interpreted + compiled modes)." }
 build-native = { cmd = "python scripts/build_native.py", description = "Compile each module to a native shared library and report status." }
-build-prefix = { cmd = "post-py build ppconstants/__init__.py --prefix dist/prefix --module-name ppconstants", description = "Build the libppconstants package-manager layout under dist/prefix." }
+build-prefix = { cmd = "post-py build ppconstants --prefix dist/prefix --module-name ppconstants", description = "Build the libppconstants package-manager layout under dist/prefix." }
 build-ext = { cmd = "python scripts/build_ext.py", description = "Build ppconstants_native, an importable NumPy-ufunc extension module." }

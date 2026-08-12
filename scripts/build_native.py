@@ -14,7 +14,7 @@ from pathlib import Path
 from postpyc.build import build_file, BuildError
 
 PACKAGE_DIR = Path(__file__).resolve().parent.parent / "ppconstants"
-PACKAGE_ENTRY = PACKAGE_DIR / "__init__.py"
+PACKAGE_ENTRY = PACKAGE_DIR  # directory entry: __post__.py takes precedence (spec §9.1)
 
 EXPECTED_NATIVE = [
     "_mathematical",

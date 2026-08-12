@@ -12,6 +12,8 @@ deliberately, source and tests together — never papered over with a
 tolerance.
 """
 
+import warnings
+
 import pytest
 
 scipy_constants = pytest.importorskip("scipy.constants")
@@ -48,6 +50,25 @@ def test_sweep_is_not_trivially_empty():
 @pytest.mark.parametrize("name", _constant_names())
 def test_constant_matches_scipy(name):
     assert getattr(ppc, name) == getattr(scipy_constants, name)
+
+
+def test_codata_table_matches_scipy_exactly():
+    assert ppc.physical_constants == scipy_constants.physical_constants
+
+
+def test_codata_accessors_match_scipy():
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for key in scipy_constants.find():
+            assert ppc.value(key) == scipy_constants.value(key), key
+            assert ppc.unit(key) == scipy_constants.unit(key), key
+            assert ppc.precision(key) == scipy_constants.precision(key), key
+
+
+def test_find_matches_scipy():
+    assert ppc.find() == scipy_constants.find()
+    for sub in ("mass", "boltzmann", "electron", "planck", "zzz"):
+        assert ppc.find(sub) == scipy_constants.find(sub), sub
 
 
 @pytest.mark.parametrize("name", ["lambda2nu", "nu2lambda"])

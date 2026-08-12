@@ -29,7 +29,7 @@ def native_artifact(tmp_path_factory):
 
     out_dir = tmp_path_factory.mktemp("ppconstants-native-abi")
     lib_path = build_file(
-        Path(ppconstants.__file__),
+        Path(ppconstants.__file__).parent,
         output=out_dir / "ppconstants.so",
         emit_header=True,
         emit_manifest=True,

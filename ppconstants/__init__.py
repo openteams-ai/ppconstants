@@ -22,11 +22,14 @@ Unit catalog (_units)                 : mass, angle, time, length,
                                         temperature, energy, power, force
 Conversion kernels (_conversions)     : lambda2nu, nu2lambda,
                                         convert_temperature
+CODATA table (_codata)                : physical_constants, value, unit,
+                                        precision, find, ConstantWarning
 
-Roadmap (see ROADMAP.md)
-------------------------------
-CODATA table : physical_constants, value, unit, precision, find
-               (blocked on Str-keyed containers upstream)
+Everything above is compiled POST Python except `_codata`, which is
+interpreted-only CPython-boundary code (spec §9.1) because POST Python
+has no Str-keyed container yet. That divergence is documented in
+`_codata` itself, in ROADMAP Target 5, and upstream in
+`docs/upstream/03-str-keyed-containers.md`.
 """
 
 from importlib import import_module as _import_module
@@ -108,6 +111,16 @@ from ppconstants._conversions import (
     CELSIUS, KELVIN, FAHRENHEIT, RANKINE,
 )
 
+# CPython-boundary import (spec §9.1): interpreted only, never compiled.
+from ppconstants._codata import (
+    physical_constants,
+    value,
+    unit,
+    precision,
+    find,
+    ConstantWarning,
+)
+
 __all__ = [
     # ── mathematical ────────────────────────────────────────────────────
     "pi", "golden", "golden_ratio",
@@ -163,6 +176,9 @@ __all__ = [
     "lambda2nu", "nu2lambda",
     "convert_temperature", "convert_temperature_code",
     "CELSIUS", "KELVIN", "FAHRENHEIT", "RANKINE",
+    # ── CODATA lookup table (interpreted only) ──────────────────────────
+    "physical_constants", "value", "unit", "precision", "find",
+    "ConstantWarning",
 ]
 
 # ── scipy-compatible temperature API ───────────────────────────────────────

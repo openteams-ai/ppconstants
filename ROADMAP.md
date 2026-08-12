@@ -54,11 +54,13 @@ Current notes:
 - Verified against postpython `13bcf30` (main): 19/19 tests pass
   (interpreted + C ABI via ctypes + ufunc extension), `build-native` and
   `build-ext` both succeed.
-- Targets 1 through 4 verified against the same postpython commit: 252
+- Targets 1 through 8 verified against the same postpython commit: 282
   tests pass, including an exact-equality sweep against scipy 1.18.0 for
-  every shared constant, all 16 temperature-scale pairs, and both
-  wavelength/frequency kernels. All five modules and the package shared
-  library compile; the extension registers three ufuncs.
+  every shared constant, the whole 445-entry CODATA table, all 16
+  temperature-scale pairs, and both wavelength/frequency kernels. All five
+  POST modules and the package shared library compile; the extension
+  registers three ufuncs; the prefix layout builds. Kernels are
+  bit-identical between compiled and interpreted execution.
 
 ## Target 1: Mathematical and Physical Scalar Constants
 
@@ -160,20 +162,42 @@ issues — a positive result worth reporting upstream alongside the gaps.
 
 ## Target 5: CODATA `physical_constants` Table
 
-Status: `Blocked` (compiler: Str-keyed containers)
+Status: `Done` for the Python API, via the documented fallback.
+`Blocked` for compiling it as POST Python.
 
-`physical_constants` dict mapping name → (value, unit, uncertainty), plus
-`value()`, `unit()`, `precision()`, `find()`, and `ConstantWarning`.
+Delivered in `_codata`: `physical_constants` (445 entries — 355 current
+CODATA 2022 plus 90 superseded), `value()`, `unit()`, `precision()`,
+`find()`, and `ConstantWarning`. Bit-exact against scipy 1.18.0 for every
+value, unit, and uncertainty, with `find()` and the warning behaviour
+compared key by key.
 
-Reproducer confirmed and written up in
+**The divergence, stated plainly:** this is the one module in the package
+that is *not* compiled POST Python. It is interpreted-only
+CPython-boundary code (spec §9.1). POST Python has no `Str`-keyed
+container, so the table cannot be expressed as POST source at all.
+Reproducer in
 [`docs/upstream/03-str-keyed-containers.md`](docs/upstream/03-str-keyed-containers.md):
 `postyp` exports no mapping type, and subscripting a module-level
 container fails with `PP900 subscripted name TABLE is not a lowered local
-array`. The draft also notes that `post-py check` passes on a module the
+array`. The draft also records that `post-py check` passes on a module the
 compiler then rejects.
 
-`find()` additionally needs working string comparison in lowered code,
-which Target 3 proved is broken — so this target depends on both drafts.
+This forced a structural change worth knowing about: because
+`__init__.py` now imports a non-POST module, the compiler can no longer
+use it as an entry point. The package gained
+[`ppconstants/__post__.py`](ppconstants/__post__.py), the spec §9.1
+explicit compile entry, which re-exports only the POST translation units.
+Build scripts and tests pass the package **directory** rather than
+`__init__.py`, since `__post__.py` only takes precedence when the compiler
+is handed a directory.
+
+Migrating `_codata` to POST Python remains blocked. `find()` additionally
+needs working string comparison in lowered code, which Target 3 proved is
+broken, so a full migration depends on both upstream drafts.
+
+Known anomaly reproduced deliberately: two keys carry scipy's stale
+CODATA 2018 values. See [`docs/accuracy.md`](docs/accuracy.md) and the pin
+in `tests/test_codata.py`.
 
 ## Target 6: Constants in the Native C ABI
 
@@ -210,10 +234,35 @@ All jobs install postpython from `main` per the working rules, rather than
 a pinned release, so CI failures distinguish library regressions from
 compiler drift.
 
-Remaining: source-only PyPI releases (`py3-none-any`, no binary wheels, no
-install/import-time compilation), the `libppconstants` + `ppconstants`
-split prefix layout via `pixi run build-prefix`, and versioned release
-notes separating the Python API, the C ABI, and the extension ABI.
+Done: the `libppconstants` prefix layout is verified end to end —
+`pixi run build-prefix` emits `lib/libppconstants.so`,
+`include/ppconstants.h`, and `share/postpyc/ppconstants.json`.
+
+Done: [`CHANGELOG.md`](CHANGELOG.md) versions the three interfaces
+separately (Python API, native C ABI, extension ABI), as the target
+requires.
+
+Done: distribution policy documented in the README — pure-source PyPI
+artifacts (`py3-none-any`), no binary wheels, no install-time or
+import-time compilation, compiled artifacts via environment package
+managers.
+
+Remaining, and deliberately deferred until there is something to release:
+cutting an actual tagged version, and the conda-forge/rattler-build recipe
+for the split `libppconstants` + `ppconstants` packages. Both want a
+merged `main` first.
+
+## Target 8: Contributor Documentation
+
+Status: `Done`
+
+- [`docs/contributing.md`](docs/contributing.md): setup, the four
+  commands, layout, how to add a constant or a kernel, the
+  `__init__.py`/`__post__.py` subtlety, and when to file upstream instead
+  of working around a compiler bug.
+- [`docs/accuracy.md`](docs/accuracy.md): per-surface reference sources,
+  claimed tolerances, and measured errors — satisfying PostSciPy working
+  rule 6 and item 4 of the definition of done.
 
 ## postpython Request Backlog
 

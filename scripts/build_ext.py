@@ -18,7 +18,7 @@ from pathlib import Path
 from postpyc.build import build_file, BuildError
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-PACKAGE_ENTRY = REPO_ROOT / "ppconstants" / "__init__.py"
+PACKAGE_ENTRY = REPO_ROOT / "ppconstants"  # directory entry: __post__.py wins (spec §9.1)
 MODULE_NAME = "ppconstants_native"
 
 

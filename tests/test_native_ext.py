@@ -30,7 +30,7 @@ def native(tmp_path_factory):
 
     out_dir = tmp_path_factory.mktemp("ppconstants-ext")
     ext = build_file(
-        Path(ppconstants.__file__),
+        Path(ppconstants.__file__).parent,
         ext_module=True,
         module_name="ppconstants_native_test",
         output=out_dir / "ppconstants_native_test.so",

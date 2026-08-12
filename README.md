@@ -47,10 +47,17 @@ shared library.
 | Binary prefixes | `_prefixes` | `kibi` ... `yobi` (float64; intentional divergence from scipy's int) |
 | Unit catalog | `_units` | 87 constants: mass, angle, time, length, pressure, area, volume, speed, temperature, energy, power, force |
 | Conversion kernels | `_conversions` | `lambda2nu`, `nu2lambda`, `convert_temperature` |
+| CODATA lookup | `_codata` | `physical_constants` (445 entries), `value`, `unit`, `precision`, `find`, `ConstantWarning` |
 
-That is 155 public constants and 3 compiled kernels — the whole
-`scipy.constants` surface except the CODATA `physical_constants` lookup
-table, which is blocked upstream (see below).
+That is the complete `scipy.constants` public surface: 155 scalar
+constants, 3 compiled kernels, and the CODATA lookup table, every shared
+name bit-exact against scipy 1.18.0.
+
+One documented exception to "everything compiles": `_codata` is
+interpreted-only CPython-boundary code (spec §9.1), because POST Python
+has no `Str`-keyed container yet. Everything else is compiled POST
+Python. See [`docs/accuracy.md`](docs/accuracy.md) for the full
+divergence list.
 
 Every constant is annotated exact / derived / measured with its reference
 source (BIPM 9th SI brochure, CODATA 2022, NIST SP 811). Unit constants
@@ -61,7 +68,10 @@ with scipy. The test suite checks values against hardcoded references and
 physical consistency relations without scipy, plus an exact-equality sweep
 against `scipy.constants` when scipy is installed.
 
-Progress is tracked target-by-target in [`ROADMAP.md`](ROADMAP.md).
+Progress is tracked target-by-target in [`ROADMAP.md`](ROADMAP.md);
+accuracy claims and reference sources are in
+[`docs/accuracy.md`](docs/accuracy.md); contributors should start with
+[`docs/contributing.md`](docs/contributing.md).
 
 ## Installation and development
 
@@ -88,7 +98,7 @@ pixi run -e dev build-prefix    # libppconstants prefix layout under dist/prefix
 ## Usage
 
 ```python
-from ppconstants import c, mile, lambda2nu, convert_temperature
+from ppconstants import c, mile, lambda2nu, convert_temperature, value, find
 
 c                                              # 299792458.0 (exact, SI definition)
 mile                                           # 1609.3439999999998 metres
@@ -97,6 +107,10 @@ convert_temperature(100.0, "Celsius", "F")     # 212.0
 
 import numpy as np
 convert_temperature(np.array([-40.0, 0.0, 37.0]), "C", "F")   # broadcasts
+
+# CODATA lookup, same API as scipy.constants
+value("electron mass")                         # 9.1093837139e-31
+find("boltzmann")                              # ['Boltzmann constant', ...]
 ```
 
 When the optional `ppconstants_native` extension is importable, the
