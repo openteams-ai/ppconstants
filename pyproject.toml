@@ -1,0 +1,91 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+# ─── Project metadata ────────────────────────────────────────────────────────
+
+[project]
+name = "ppconstants"
+version = "0.1.0"
+description = "scipy.constants reimplemented in POST Python — typed physical and mathematical constants plus conversion kernels that compile to native code."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "T-FEH" }]
+keywords = ["constants", "physical-constants", "scipy", "ufunc", "postpyc", "postyp", "aot", "numerical"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "postpyc @ git+https://github.com/openteams-ai/postpython.git",
+]
+
+[project.optional-dependencies]
+numpy = ["numpy"]
+# scipy is a *reference*, never a runtime dependency (PostSciPy working
+# rule 4). It belongs in the dev environment so the comparison sweep in
+# tests/test_scipy_compat.py actually runs; without it that sweep silently
+# skips and most of the value verification goes with it.
+dev = ["pytest>=7", "numpy", "scipy"]
+
+[project.urls]
+Repository = "https://github.com/openteams-ai/ppconstants"
+Standard = "https://github.com/openteams-ai/postpython/blob/main/docs/spec.md"
+
+# ─── Build configuration ─────────────────────────────────────────────────────
+
+[tool.hatch.build.targets.wheel]
+packages = ["ppconstants"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "ppconstants",
+    "tests",
+    "scripts",
+    "docs",
+    "README.md",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+    "pyproject.toml",
+]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# ─── Pixi ────────────────────────────────────────────────────────────────────
+# `pixi install -e dev` then `pixi run -e dev test` / `pixi run -e dev build-native`.
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "linux-aarch64", "win-64"]
+
+[tool.pixi.pypi-dependencies]
+ppconstants = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+python = ">=3.10"
+# A C compiler is required to build the kernels to native code.
+c-compiler = "*"
+
+[tool.pixi.feature.dev.dependencies]
+pytest = ">=7"
+numpy = "*"
+# Reference only, for the comparison sweep — never a runtime dependency.
+scipy = "*"
+
+[tool.pixi.environments]
+default = { solve-group = "default" }
+dev = { features = ["dev"], solve-group = "default" }
+
+[tool.pixi.tasks]
+test = { cmd = "pytest tests/", description = "Run the test suite (interpreted + compiled modes, plus the scipy sweep)." }
+test-no-scipy = { cmd = "pytest tests/ --ignore=tests/test_scipy_compat.py", description = "Run only the tests that do not need scipy — mirrors the blocking CI job." }
+build-native = { cmd = "python scripts/build_native.py", description = "Compile each module to a native shared library and report status." }
+build-prefix = { cmd = "post-py build ppconstants --prefix dist/prefix --module-name ppconstants", description = "Build the libppconstants package-manager layout under dist/prefix." }
+build-ext = { cmd = "python scripts/build_ext.py", description = "Build ppconstants_native, an importable NumPy-ufunc extension module." }
