@@ -29,6 +29,13 @@ class TestLambda2Nu:
         for lam in [1e-9, 632.8e-9, 1.0, 21.106e-2]:
             assert close(nu2lambda(lambda2nu(lam)), lam)
 
+    def test_roundtrip_across_27_decades(self):
+        # Backs the range quoted in docs/accuracy.md; runs without numpy.
+        lam = 1e-12
+        while lam <= 1e15:
+            assert close(nu2lambda(lambda2nu(lam)), lam), lam
+            lam *= 10.0
+
 
 class TestNu2Lambda:
     def test_one_hertz(self):

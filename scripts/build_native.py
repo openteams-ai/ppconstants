@@ -2,9 +2,14 @@
 
 Every module must build (constants-only modules compile to translation
 units whose constants fold into importing kernels; _conversions links
-against _physical's `c` via cross-module constant import). The whole
-package is also built into a single shared library from
-ppconstants/__init__.py. Any failure exits non-zero.
+against _physical's `c` via cross-module constant import).
+
+The whole package is also built into a single shared library. The entry
+passed to the compiler is the package **directory**, not
+``ppconstants/__init__.py``: the manifest imports the interpreted-only
+``_codata`` module, which is not POST Python, so it cannot be the compile
+entry. Handing the compiler a directory makes ``__post__.py`` take
+precedence (spec §9.1). Any failure exits non-zero.
 """
 
 import sys

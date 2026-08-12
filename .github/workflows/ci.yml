@@ -52,6 +52,12 @@ jobs:
         run: python scripts/build_native.py
       - name: Build the NumPy ufunc extension module
         run: python scripts/build_ext.py
+      - name: Re-run the suite with the real native extension importable
+        # build_ext.py leaves ppconstants_native in the repo root, so this
+        # run exercises the native-preference path in ppconstants/__init__
+        # with genuine compiled ufuncs — the one thing the interpreted job
+        # cannot cover.
+        run: python -m pytest tests/ --ignore=tests/test_scipy_compat.py -q
       - name: Record the postpython commit used for verification
         run: |
           python - <<'PY'

@@ -64,7 +64,17 @@ Three interfaces are versioned separately and are called out per entry:
 
 ### Verification
 
-postpython `main` @ `13bcf30`: 282 tests pass across interpreted, C ABI,
-and compiled-ufunc modes; all five POST modules and the package shared
+postpython `main` @ `13bcf30`: 296 tests pass across interpreted, C ABI,
+and compiled-ufunc modes; 116 of those still pass with scipy uninstalled,
+which is what CI blocks on. All five POST modules and the package shared
 library compile; the extension registers three ufuncs. Kernels are
 bit-identical between compiled and interpreted execution.
+
+An independent review verified the value claims by byte-comparing all 155
+constants and all 445 table entries against scipy, reproduced all three
+upstream findings, and mutation-tested the suite (90 injected value
+errors, 90 caught). It found no numerical defect. It did find that scipy
+was undeclared in every environment, so the comparison sweep silently
+skipped and five unit families were left without a scipy-independent
+pin — fixed here, along with four documentation claims that overstated
+how the numbers were asserted.

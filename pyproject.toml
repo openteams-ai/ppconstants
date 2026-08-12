@@ -28,7 +28,11 @@ dependencies = [
 
 [project.optional-dependencies]
 numpy = ["numpy"]
-dev = ["pytest>=7", "numpy"]
+# scipy is a *reference*, never a runtime dependency (PostSciPy working
+# rule 4). It belongs in the dev environment so the comparison sweep in
+# tests/test_scipy_compat.py actually runs; without it that sweep silently
+# skips and most of the value verification goes with it.
+dev = ["pytest>=7", "numpy", "scipy"]
 
 [project.urls]
 Repository = "https://github.com/openteams-ai/ppconstants"
@@ -72,13 +76,16 @@ c-compiler = "*"
 [tool.pixi.feature.dev.dependencies]
 pytest = ">=7"
 numpy = "*"
+# Reference only, for the comparison sweep — never a runtime dependency.
+scipy = "*"
 
 [tool.pixi.environments]
 default = { solve-group = "default" }
 dev = { features = ["dev"], solve-group = "default" }
 
 [tool.pixi.tasks]
-test = { cmd = "pytest tests/", description = "Run the test suite (interpreted + compiled modes)." }
+test = { cmd = "pytest tests/", description = "Run the test suite (interpreted + compiled modes, plus the scipy sweep)." }
+test-no-scipy = { cmd = "pytest tests/ --ignore=tests/test_scipy_compat.py", description = "Run only the tests that do not need scipy — mirrors the blocking CI job." }
 build-native = { cmd = "python scripts/build_native.py", description = "Compile each module to a native shared library and report status." }
 build-prefix = { cmd = "post-py build ppconstants --prefix dist/prefix --module-name ppconstants", description = "Build the libppconstants package-manager layout under dist/prefix." }
 build-ext = { cmd = "python scripts/build_ext.py", description = "Build ppconstants_native, an importable NumPy-ufunc extension module." }

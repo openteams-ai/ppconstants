@@ -57,12 +57,32 @@ def test_codata_table_matches_scipy_exactly():
 
 
 def test_codata_accessors_match_scipy():
+    """Compare every key, obsolete ones included, not just current ones."""
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        for key in scipy_constants.find():
+        for key in ppc.physical_constants:
             assert ppc.value(key) == scipy_constants.value(key), key
             assert ppc.unit(key) == scipy_constants.unit(key), key
             assert ppc.precision(key) == scipy_constants.precision(key), key
+
+
+def _warns(accessor, key):
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        accessor(key)
+    return any(
+        issubclass(w.category, DeprecationWarning) and "not in current" in str(w.message)
+        for w in caught
+    )
+
+
+def test_constant_warning_behaviour_matches_scipy():
+    """Our ConstantWarning must fire on exactly the keys scipy's does."""
+    disagreed = [
+        key for key in ppc.physical_constants
+        if _warns(ppc.value, key) != _warns(scipy_constants.value, key)
+    ]
+    assert disagreed == []
 
 
 def test_find_matches_scipy():

@@ -18,8 +18,19 @@ test suite on every run.
 | `convert_temperature` | scipy 1.18.0 | bit-exact | 0.0 absolute |
 | Compiled vs interpreted, all kernels | interpreted mode | bit-exact | 0.0 |
 
-"Bit-exact" is a real claim here, not a rounded one: the tests use `==`,
-not a tolerance, and the measured error is exactly zero.
+"Bit-exact" is a real claim here, not a rounded one: the measured error is
+exactly zero in every row, verified independently of the tests.
+
+How each row is *asserted* varies, and it is worth being precise about
+that. Constants and the CODATA table are compared with `==`, so those
+rows are pinned bit-for-bit by the suite itself. The kernel rows are
+asserted with tight tolerances rather than `==` —
+`pytest.approx(rel=0, abs=1e-12)` for `convert_temperature` against
+scipy, and `np.allclose` at `rtol=1e-15` / `atol=1e-12` for compiled
+versus interpreted — even though the observed error is 0.0. The
+tolerances exist so that a future libm or platform difference reports as
+a measurable regression rather than an opaque failure; they are not a
+hedge about the current numbers.
 
 ## Why the constants are bit-exact and not merely close
 
@@ -97,9 +108,11 @@ suite still means something without scipy installed.
 
 Transcribed from scipy 1.18.0: 355 current CODATA 2022 entries plus 90
 superseded entries retained from the 2002-2018 adjustments. Values,
-units, and uncertainties all compared exactly; `find()` and the
-`ConstantWarning` behaviour are compared against scipy for every current
-key.
+units, and uncertainties are compared with `==` against scipy for **all
+445 keys**, current and superseded alike. `find()` is compared for
+several substrings and for the no-argument case, and `ConstantWarning` is
+checked to fire on exactly the same keys scipy warns on, again across all
+445.
 
 **Known upstream anomaly.** Two keys, `natural unit of momentum` and
 `natural unit of momentum in MeV/c`, carry their CODATA 2018 value and
@@ -135,11 +148,23 @@ These are deliberate and tested, not accidents.
 ## Reproducing these numbers
 
 ```bash
-pixi run -e dev test                     # everything, including the scipy sweep
+pixi run -e dev test              # everything, including the scipy sweep
+pixi run -e dev test-no-scipy     # only what the blocking CI job runs
 python -m pytest tests/test_scipy_compat.py -v   # the comparison sweep alone
 ```
 
-The scipy sweep is skipped automatically when scipy is not installed, so
-the suite runs without it. In CI the sweep is a separate,
-`continue-on-error` job: a mismatch may mean scipy changed a reference
-value, which should be investigated rather than treated as a build break.
+scipy is declared in the `dev` environment precisely so `pixi run -e dev
+test` really does run the sweep. It is a reference, never a runtime
+dependency: the sweep is skipped automatically when scipy is absent, and
+`test-no-scipy` mirrors that path so it stays honest.
+
+**Read the split carefully when judging coverage.** The scipy sweep is a
+large share of the suite, and in CI it is a separate `continue-on-error`
+job, because a mismatch may mean scipy changed a reference value rather
+than that this package regressed. That means the *blocking* job is the
+one without scipy — so every constant also carries at least one
+scipy-independent assertion pinning its value or its defining relation,
+not merely its relationship to a sibling constant. A tautological check
+such as `slinch == blob` does not count as a pin, and the families that
+previously had only that kind of check (`blob`/`slug`, `survey_foot`,
+`litre`, `mach`, `erg`) now have independent ones.

@@ -104,11 +104,19 @@ class TestConstantWarning:
             ppc.unit("elementary charge")
             ppc.precision("elementary charge")
 
-    def test_alias_key_does_not_warn(self):
-        alias = next(iter(_codata._ALIAS_KEYS))
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", ppc.ConstantWarning)
-            ppc.value(alias)
+    def test_alias_keys_do_not_warn(self):
+        # Every alias, not one arbitrary key: set iteration order varies per
+        # run, and some aliases are also current keys where this is vacuous.
+        assert _codata._ALIAS_KEYS, "alias set should not be empty"
+        for alias in sorted(_codata._ALIAS_KEYS):
+            with warnings.catch_warnings():
+                warnings.simplefilter("error", ppc.ConstantWarning)
+                ppc.value(alias)
+
+    def test_some_aliases_are_genuinely_obsolete_keys(self):
+        # Guards the test above from becoming vacuous: the alias mechanism
+        # only matters for keys that would otherwise warn.
+        assert _codata._ALIAS_KEYS & _codata._OBSOLETE_KEYS
 
     def test_all_three_accessors_warn(self):
         key = "Wien displacement law constant"

@@ -31,10 +31,16 @@ git -C /path/to/postpython rev-parse --short HEAD        # record this hash
 
 | Command | What it proves |
 |---|---|
-| `pixi run -e dev test` | interpreted, C ABI, and compiled ufunc modes all agree |
+| `pixi run -e dev test` | interpreted, C ABI, and compiled ufunc modes all agree, plus the scipy sweep |
+| `pixi run -e dev test-no-scipy` | the same minus the sweep — this is what blocking CI runs |
 | `pixi run -e dev build-native` | every module and the package compile to a C shared library |
 | `pixi run -e dev build-ext` | the NumPy ufunc extension builds and imports |
 | `pixi run -e dev build-prefix` | the `libppconstants` package-manager layout builds |
+
+Run `test-no-scipy` before claiming a constant is covered. The scipy
+sweep is a large share of the suite but is `continue-on-error` in CI, so
+a constant pinned *only* by the sweep can regress without failing a
+build.
 
 ## Layout
 
@@ -77,8 +83,12 @@ CPython-boundary code, in which case it goes in `__init__.py` only.
 3. Order matters. The constant folder resolves references to *previously
    defined* names only.
 4. Add it to `__init__.py` (import and `__all__`) and to `__post__.py`.
-5. Add a test asserting its defining relation, not just its decimal. The
-   scipy sweep picks the constant up automatically.
+5. Add a test that would fail if the value were wrong, and make sure it
+   lives outside `test_scipy_compat.py`. Asserting a relation to a
+   sibling constant is not enough on its own: `slinch == blob` passes for
+   any value of `blob`. Pin the number, or tie it to an independent
+   definition (`blob == lbf / inch`), or both. The scipy sweep will pick
+   the constant up automatically, but that sweep does not block CI.
 6. Note the reference source in `docs/accuracy.md` if the group is new.
 
 ## Adding a kernel

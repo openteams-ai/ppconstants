@@ -33,6 +33,14 @@ class TestMass:
         assert ppc.slinch == ppc.blob
         assert ppc.slug == ppc.blob / 12.0
 
+    def test_slug_family_values(self):
+        # Independent pins: a blob is one lbf*s^2 per inch, a slug per foot.
+        assert abs(ppc.blob - ppc.lbf / ppc.inch) < 1e-12
+        assert abs(ppc.slug - ppc.lbf / ppc.foot) < 1e-12
+        # Published decimals, so a wrong derivation cannot pass silently.
+        assert abs(ppc.blob - 175.12683524647636) < 1e-10
+        assert abs(ppc.slug - 14.593902937206364) < 1e-12
+
     def test_metric(self):
         assert ppc.gram == 1e-3
         assert ppc.metric_ton == 1e3
@@ -76,6 +84,12 @@ class TestLength:
         assert ppc.survey_foot > ppc.foot
         assert ppc.survey_mile == 5280.0 * ppc.survey_foot
 
+    def test_survey_foot_value(self):
+        # NIST SP 811: exactly 1200/3937 m, i.e. 2 ppm longer than 0.3048.
+        assert abs(ppc.survey_foot - 0.3048006096012192) < 1e-16
+        assert abs(ppc.survey_foot / ppc.foot - 1.0 - 2e-6) < 1e-9
+        assert abs(ppc.survey_mile - 1609.3472186944373) < 1e-9
+
     def test_metric_and_astronomical(self):
         assert ppc.fermi == 1e-15
         assert ppc.angstrom == 1e-10
@@ -111,6 +125,12 @@ class TestAreaAndVolume:
         assert ppc.hectare == 1e4
         assert ppc.acre == 43560.0 * (ppc.foot * ppc.foot)
 
+    def test_litre(self):
+        # A litre is a cubic decimetre: (0.1 m)^3 = 1e-3 m^3, exactly.
+        assert ppc.litre == 1e-3
+        assert ppc.liter == ppc.litre
+        assert abs(ppc.litre - (0.1 * 0.1 * 0.1)) < 1e-18
+
     def test_us_volume_chain(self):
         assert ppc.gallon == 231.0 * (ppc.inch * ppc.inch * ppc.inch)
         assert ppc.gallon_US == ppc.gallon
@@ -132,6 +152,12 @@ class TestSpeed:
         assert ppc.knot == ppc.nautical_mile / ppc.hour
         assert ppc.speed_of_sound == ppc.mach
 
+    def test_mach_value(self):
+        # scipy's convention: approx. speed of sound at 15 C, 1 atm.
+        assert ppc.mach == 340.5
+        # A knot is one nautical mile per hour, i.e. 1.852 km/h exactly.
+        assert abs(ppc.knot * ppc.hour / 1e3 - 1.852) < 1e-12
+
     def test_known_conversions(self):
         # 100 km/h is about 62.14 mph.
         assert abs(100.0 * ppc.kmh / ppc.mph - 62.137) < 1e-2
@@ -141,6 +167,11 @@ class TestEnergyPowerForce:
     def test_ev_is_elementary_charge(self):
         assert ppc.eV == ppc.e
         assert ppc.electron_volt == ppc.eV
+
+    def test_erg(self):
+        # The CGS unit of energy: 1 dyne-centimetre = 1e-5 N * 1e-2 m.
+        assert ppc.erg == 1e-7
+        assert abs(ppc.erg - ppc.dyn * ppc.centi) < 1e-22
 
     def test_calories(self):
         assert ppc.calorie == 4.184

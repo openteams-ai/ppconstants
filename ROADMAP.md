@@ -38,7 +38,8 @@ Status: `Done` (verified against postpython `13bcf30`; kept under CI)
 
 Acceptance criteria:
 
-- Interpreted tests pass: `pixi run test` (or `python -m pytest tests/`).
+- Interpreted tests pass: `pixi run -e dev test` (or `python -m pytest tests/`).
+  The `dev` environment is required — pytest, numpy, and scipy live there.
 - Native build passes with a postpython checkout on `main`:
   `pixi run build-native`.
 - Extension build passes: `pixi run build-ext`.
@@ -168,8 +169,10 @@ Status: `Done` for the Python API, via the documented fallback.
 Delivered in `_codata`: `physical_constants` (445 entries — 355 current
 CODATA 2022 plus 90 superseded), `value()`, `unit()`, `precision()`,
 `find()`, and `ConstantWarning`. Bit-exact against scipy 1.18.0 for every
-value, unit, and uncertainty, with `find()` and the warning behaviour
-compared key by key.
+value, unit, and uncertainty across all 445 keys — current and superseded
+alike — with `find()` compared for several substrings plus the
+no-argument case, and `ConstantWarning` checked to fire on exactly the
+keys scipy warns on.
 
 **The divergence, stated plainly:** this is the one module in the package
 that is *not* compiled POST Python. It is interpreted-only
